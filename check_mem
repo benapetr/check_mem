@@ -33,6 +33,10 @@ def parameter_cleanup(p, default_value):
 
 threshold_critical = parameter_cleanup(args.critical, 90)
 threshold_warning = parameter_cleanup(args.warning, 80)
+threshold_pt_warning = parameter_cleanup(args.critical_pagetable, 10)
+threshold_pt_critical = parameter_cleanup(args.critical_pagetable, 20)
+threshold_swap_critical = parameter_cleanup(args.critical_swap, 90)
+threshold_swap_warning = parameter_cleanup(args.critical_swap, 80)
 
 #######################################################################################
 
@@ -79,15 +83,42 @@ if (mem_avail is None):
     mem_avail = mem_free + mem_cached + mem_buffers
 
 percentual_memory_used = int(100 - ((mem_avail / mem_total) * 100))
+percentual_swap_used = 0
+if (swap_total > 0):
+    percentual_swap_used = int(100 - ((swap_free / swap_total) * 100))
+percentual_pt_used = int((mem_pt / mem_total) * 100)
+
+show_pt = False
 
 # Process thresholds
+if (threshold_swap_warning > 0 and threshold_swap_warning <= percentual_swap_used):
+    result = 1 
+
+if (threshold_pt_warning > 0 and threshold_pt_warning <= percentual_pt_used):
+    show_pt = True
+    result = 1
+
 if (threshold_warning > 0 and threshold_warning <= percentual_memory_used):
     result = 1 
+
 
 if (threshold_critical > 0 and threshold_critical <= percentual_memory_used):
     result = 2 
 
-result_text = "[MEMORY] Total: " + human_size(mem_total) + " - Used: " + human_size(mem_total - mem_avail)
+if (threshold_swap_critical > 0 and threshold_swap_critical <= percentual_swap_used):
+    result = 2
+
+if (threshold_pt_critical > 0 and threshold_pt_critical <= percentual_pt_used):
+    show_pt = True
+    result = 2
+
+result_text = "[MEMORY] Total: " + human_size(mem_total) + " - Used: " + human_size(mem_total - mem_avail) + " (" + str(percentual_memory_used) + "%)"
+
+if (swap_total > 0):
+    result_text = result_text + " [SWAP] Total: " + human_size(swap_total) + " - Used: " + human_size(swap_total - swap_free) + " (" + str(percentual_swap_used) + "%)"
+
+if (show_pt > 0):
+    result_text = result_text + " [PAGE TABLE] Size: " + human_size(mem_pt) + " (" + str(percentual_pt_used) + "%)"
 
 print(result_text)
 
